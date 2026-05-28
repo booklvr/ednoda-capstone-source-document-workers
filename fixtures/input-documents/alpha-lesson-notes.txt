@@ -1,0 +1,26 @@
+Source Document Test Pack: Plain Text Notes
+Topic: Animals, habitats, and simple present tense
+
+Purpose
+This TXT file tests plain-text extraction. It includes headings, bullets, numbers, punctuation, and ASCII text that should be stable across environments.
+
+Learning goals
+- Identify animal habitat vocabulary.
+- Use simple present tense.
+- Answer short questions in full sentences.
+
+Vocabulary
+1. habitat: the natural home of an animal or plant
+2. nocturnal: active at night
+3. predator: an animal that hunts another animal
+4. prey: an animal that is hunted by another animal
+
+Passage
+A red fox lives near the forest. It sleeps during the day and hunts at night. The fox eats small animals, fruit, and insects.
+
+Questions
+1. Where does the red fox live?
+2. When does the fox hunt?
+3. What does the fox eat?
+
+End of test file.

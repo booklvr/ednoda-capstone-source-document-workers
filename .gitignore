@@ -1,0 +1,8 @@
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+.test-venv/
+local-output/
+*.zip
+node_modules/

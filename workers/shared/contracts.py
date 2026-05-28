@@ -1,0 +1,69 @@
+"""Contract literals aligned with src/schemas/source-documents/*."""
+
+MANIFEST_VERSION = "ednoda.extracted-source-document.v1"
+BLOCK_VERSION = "ednoda.extracted-source-document-block.v1"
+PREVIEW_PAGE_CONTENT_TYPE = "image/webp"
+
+EXTRACTION_STRATEGY_PLAIN_TEXT = "plain_text"
+EXTRACTION_STRATEGY_PDF_TEXT_LAYER = "pdf_text_layer"
+
+PREVIEW_STRATEGY_PLAIN_TEXT = "plain_text"
+PREVIEW_STRATEGY_PAGE_IMAGES = "page_images"
+
+EXTRACTION_STATUS_READY = "ready"
+EXTRACTION_STATUS_FAILED = "failed"
+EXTRACTION_STATUS_OCR_REQUIRED = "ocr_required"
+
+PREVIEW_STATUS_READY = "ready"
+PREVIEW_STATUS_PARTIAL = "partial"
+PREVIEW_STATUS_FAILED = "failed"
+
+CANDIDATE_STATUS_READY = "ready"
+CANDIDATE_STATUS_FAILED = "failed"
+
+CANDIDATE_TYPE_VOCAB = "vocab"
+CANDIDATE_TYPE_QUESTION = "question"
+CANDIDATE_TYPE_EXPRESSION = "expression"
+
+CANDIDATE_EXTRACTION_INPUT_VERSION = "source-document-candidate-extraction.v1"
+CANDIDATE_EXTRACTION_RESULT_VERSION = "source-document-candidate-extraction-result.v1"
+
+WARNING_NO_CANDIDATES_FOUND = "no_candidates_found"
+WARNING_UBC_LOCAL_STUB_DUMMY = "ubc_local_stub_dummy_response"
+
+CANDIDATE_EXTRACTION_ENVIRONMENTS = frozenset({"dev", "staging", "demo", "prod"})
+
+WARNING_PREVIEW_PAGES_TRUNCATED = "preview_pages_truncated"
+
+WARNING_TEXT_LAYER_COVERAGE_BELOW_THRESHOLD = "text_layer_coverage_below_threshold"
+
+# Alpha PDF embedded-text heuristics (no OCR in Alpha).
+MIN_PDF_TOTAL_TEXT_CHARS = 32
+MIN_PDF_MEANINGFUL_PAGE_CHARS = 8
+MIN_PDF_PAGE_TEXT_COVERAGE_RATIO = 0.25
+
+DEFAULT_PDF_RENDER_DPI = 150
+DEFAULT_MAX_PREVIEW_PAGES = 50
+DEFAULT_MAX_TABLE_ROWS_FOR_PREVIEW = 200
+DEFAULT_MAX_EXTRACTION_CHARS = 500_000
+DEFAULT_MAX_BLOCKS = 5_000
+DEFAULT_MAX_CHUNKS = 5_000
+DEFAULT_MAX_PROCESSING_SECONDS = 240
+DEFAULT_TXT_PREVIEW_MAX_CHARS = 8000
+DEFAULT_CHUNK_TARGET_CHARS = 512
+
+PREVIEW_STRATEGY_CSV_TABLE = "csv_table"
+PREVIEW_STRATEGY_UNSUPPORTED = "unsupported"
+
+PREVIEW_STATUS_UNSUPPORTED = "unsupported"
+
+EXTRACTION_STRATEGY_CSV = "csv"
+EXTRACTION_STRATEGY_DOCX = "docx"
+EXTRACTION_STRATEGY_PPTX = "pptx"
+EXTRACTION_STATUS_PARTIAL = "partial"
+
+WARNING_PREVIEW_TABLE_ROWS_TRUNCATED = "preview_table_rows_truncated"
+WARNING_EXTRACTION_CHARS_TRUNCATED = "extraction_chars_truncated"
+WARNING_EXTRACTION_BLOCKS_TRUNCATED = "extraction_blocks_truncated"
+WARNING_EXTRACTION_CHUNKS_TRUNCATED = "extraction_chunks_truncated"
+WARNING_PROCESSING_TIME_LIMIT = "processing_time_limit_reached"
