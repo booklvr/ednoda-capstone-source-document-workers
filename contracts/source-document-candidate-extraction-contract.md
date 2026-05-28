@@ -217,8 +217,6 @@ Each candidate is a **metadata row** for review — not a rewrite of the text pa
 | `candidateType` | enum | yes | Must be an Ednoda `NodeCandidateType` value — see below |
 | `text` | string (min 1) | yes | Display text for review UI |
 | `normalizedText` | string or null | no | Dedupe / matching key; Ednoda prefers this for upsert when set |
-| `promptText` | string or null | no | Optional review hint. Conversion uses `text` only — not stored on `EducationNode`. |
-| `answerText` | string or null | no | Optional review hint for paired material. Not used for MVP conversion. |
 | `sourceBlockId` | string or null | no | e.g. `block-000001` — links to S3 block file |
 | `sourcePageNumber` | positive int or null | no | PDF page when known |
 | `sourceSlideNumber` | positive int or null | no | PPTX slide when known |
@@ -346,7 +344,6 @@ Stale duplicate callbacks (same terminal state already recorded) do not re-send 
       "candidateType": "question",
       "text": "What is the past tense of \"go\"?",
       "normalizedText": "what is the past tense of go",
-      "promptText": "What is the past tense of \"go\"?",
       "sourceBlockId": "block-000001"
     }
   ],

@@ -206,8 +206,6 @@ Each candidate is a **metadata row** for teacher review — not a rewrite of the
 | `candidateType` | enum | yes | See `candidateType` values below |
 | `text` | string (min 1) | yes | Display text for review UI |
 | `normalizedText` | string or null | no | Dedupe/matching key; Ednoda prefers this for upsert when set |
-| `promptText` | string or null | no | Optional review hint (e.g. duplicated question wording). **Not** stored on `EducationNode`; conversion uses `text` only. |
-| `answerText` | string or null | no | Optional review hint for paired Q&A material. **Not** used for conversion in MVP. |
 | `sourceBlockId` | string or null | no | e.g. `block-000001` — links to S3 block file |
 | `sourcePageNumber` | positive int or null | no | PDF page when known |
 | `sourceSlideNumber` | positive int or null | no | PPTX slide when known |
@@ -225,7 +223,7 @@ UBC should emit **only** these four strings. They align with Ednoda's atomic pro
 | `question` | Assessment / comprehension prompts |
 | `unknown` | Use when classification is uncertain |
 
-Put the teacher-facing string in **`text`**. Do not rely on `promptText` / `answerText` for conversion — those fields are optional review hints only.
+Put the teacher-facing string in **`text`**.
 
 **Invalid values:** Ednoda callbacks reject any `candidateType` outside the four values above. An earlier contract draft listed broader labels (`answer`, `grammar_pattern`, `phonics`, `dialogue`, `sentence_frame`, `activity_instruction`); UBC must not emit them — use `expression` or `unknown` instead. Those labels are original-PRD drift, not accepted runtime behavior.
 
@@ -364,7 +362,6 @@ When `callback.taskToken` is present, Ednoda resolves the Step Functions task ex
       "candidateType": "question",
       "text": "What is the past tense of \"go\"?",
       "normalizedText": "what is the past tense of go",
-      "promptText": "What is the past tense of \"go\"?",
       "sourceBlockId": "block-000001",
       "confidence": 0.87
     },

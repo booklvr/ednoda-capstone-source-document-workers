@@ -51,8 +51,6 @@ def build_dummy_ubc_extraction_result(
                 "candidateType": CANDIDATE_TYPE_VOCAB,
                 "text": f"{filename}: ubc-local-stub vocabulary",
                 "normalizedText": f"doc-{document_id}-ext-{extraction_id}-vocab",
-                "promptText": None,
-                "answerText": None,
                 "sourceBlockId": None,
                 "sourcePageNumber": None,
                 "sourceSlideNumber": None,
@@ -69,10 +67,6 @@ def build_dummy_ubc_extraction_result(
                 "normalizedText": (
                     f"doc-{document_id}-ext-{extraction_id}-question"
                 ),
-                "promptText": (
-                    f"What did ubc-local-stub extract from document {document_id}?"
-                ),
-                "answerText": "Deterministic stub answer (not from S3).",
                 "sourceBlockId": None,
                 "sourcePageNumber": None,
                 "sourceSlideNumber": None,

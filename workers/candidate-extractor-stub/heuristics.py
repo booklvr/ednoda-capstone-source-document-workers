@@ -44,8 +44,6 @@ class CandidateDraft(TypedDict, total=False):
     candidateType: str
     text: str
     normalizedText: str
-    promptText: str | None
-    answerText: str | None
     sourceBlockId: str | None
     sourcePageNumber: int | None
     confidence: float
@@ -113,8 +111,6 @@ def classify_line_candidate(line: str, line_number: int) -> CandidateDraft | Non
             "candidateType": CANDIDATE_TYPE_QUESTION,
             "text": stripped,
             "normalizedText": normalized,
-            "promptText": stripped,
-            "answerText": None,
             "sourceBlockId": block_id,
             "confidence": 0.8,
             "metadata": metadata,
@@ -127,8 +123,6 @@ def classify_line_candidate(line: str, line_number: int) -> CandidateDraft | Non
             "candidateType": CANDIDATE_TYPE_VOCAB,
             "text": vocabulary_text,
             "normalizedText": normalized,
-            "promptText": None,
-            "answerText": None,
             "sourceBlockId": block_id,
             "confidence": 0.75,
             "metadata": {**metadata, "heuristic": "alpha_vocabulary_pattern"},
@@ -179,8 +173,6 @@ def detect_expression_candidates(lines: list[str]) -> list[CandidateDraft]:
                 "candidateType": CANDIDATE_TYPE_EXPRESSION,
                 "text": display,
                 "normalizedText": normalize_candidate_text(display),
-                "promptText": None,
-                "answerText": None,
                 "sourceBlockId": _line_block_id(first_line),
                 "confidence": 0.65,
                 "metadata": {
