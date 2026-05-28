@@ -18,9 +18,9 @@ from shared.contracts import (
     EXTRACTION_STATUS_READY,
     MANIFEST_VERSION,
 )
-from shared.keys import format_block_key, format_chunk_key
+from shared.keys import format_block_key, format_chunk_key, format_image_key, image_filename
 from shared.s3_client import S3Client, write_object_bytes
-from pdf_logic import PdfExtractionResult
+from pdf_logic import ExtractedImage, PdfExtractionResult
 from text_blocks import TextBlock, TextChunk
 from txt_logic import TxtExtractionResult
 
@@ -40,6 +40,7 @@ def build_block_payload(
     source_document_id: int,
     extraction_id: int,
     block: TextBlock,
+    media_key: str | None = None,
 ) -> dict[str, Any]:
     source: dict[str, int] = {}
     if block.source_page_number is not None:
@@ -54,7 +55,30 @@ def build_block_payload(
         "text": block.text,
         "detectedLanguage": block.detected_language,
     }
+    if media_key is not None:
+        payload["mediaKey"] = media_key
     return payload
+
+
+def build_preview_markdown(
+    blocks: list[TextBlock],
+    block_image_paths: dict[str, str],
+) -> str:
+    """Render blocks as human-previewable markdown.
+
+    Tables already carry markdown text. Image blocks are rendered as relative
+    ``![image](images/...)`` references when their PNG was saved; otherwise the
+    block text (the ``[image]`` placeholder) is kept. All other blocks pass
+    through unchanged.
+    """
+    parts: list[str] = []
+    for block in blocks:
+        relative_path = block_image_paths.get(block.block_id)
+        if block.block_type == "image" and relative_path is not None:
+            parts.append(f"![image]({relative_path})")
+        else:
+            parts.append(block.text)
+    return "\n\n".join(parts)
 
 
 def build_chunk_payload(
@@ -95,7 +119,14 @@ def build_manifest(
     page_count: int | None,
     detected_languages: list[str],
     warnings: list[str],
+    images: list[ExtractedImage] | None = None,
 ) -> dict[str, Any]:
+    images = images or []
+    image_key_by_block_id = {
+        image.block_id: format_image_key(package_keys["imagesPrefix"], image_number)
+        for image_number, image in enumerate(images, start=1)
+    }
+
     block_index = []
     for block_number, block in enumerate(blocks, start=1):
         block_key = format_block_key(package_keys["blocksPrefix"], block_number)
@@ -109,6 +140,9 @@ def build_manifest(
         }
         if block.source_page_number is not None:
             item["sourcePageNumber"] = block.source_page_number
+        media_key = image_key_by_block_id.get(block.block_id)
+        if media_key is not None:
+            item["mediaKey"] = media_key
         block_index.append(item)
 
     chunk_items = []
@@ -137,6 +171,29 @@ def build_manifest(
     if page_count is not None:
         extraction_section["pageCount"] = page_count
 
+    outputs: dict[str, Any] = {
+        "plainText": {
+            "bucket": text_bucket,
+            "key": package_keys["plainTextKey"],
+        },
+        "previewMarkdown": {
+            "bucket": text_bucket,
+            "key": package_keys["previewMarkdownKey"],
+        },
+        "blockIndex": block_index,
+        "chunks": chunk_items,
+    }
+    if images:
+        outputs["images"] = [
+            {
+                "blockId": image.block_id,
+                "bucket": text_bucket,
+                "key": image_key_by_block_id[image.block_id],
+                "sourcePageNumber": image.page_number,
+            }
+            for image in images
+        ]
+
     return {
         "version": MANIFEST_VERSION,
         "document": {
@@ -149,14 +206,7 @@ def build_manifest(
             "originalKey": original_key,
         },
         "extraction": extraction_section,
-        "outputs": {
-            "plainText": {
-                "bucket": text_bucket,
-                "key": package_keys["plainTextKey"],
-            },
-            "blockIndex": block_index,
-            "chunks": chunk_items,
-        },
+        "outputs": outputs,
     }
 
 
@@ -180,7 +230,13 @@ def write_text_package(
     page_count: int | None,
     detected_languages: list[str],
     warnings: list[str],
+    images: list[ExtractedImage] | None = None,
 ) -> None:
+    # Drop images whose block was removed (e.g. by extraction limits) so saved
+    # files and manifest pointers never reference a missing block.
+    surviving_block_ids = {block.block_id for block in blocks}
+    images = [image for image in (images or []) if image.block_id in surviving_block_ids]
+
     write_object_bytes(
         client,
         bucket=text_bucket,
@@ -189,12 +245,37 @@ def write_text_package(
         content_type="text/plain; charset=utf-8",
     )
 
+    # Save figure PNGs first; build block_id -> (full key, relative path) maps so
+    # block payloads and preview.md can reference them.
+    image_key_by_block_id: dict[str, str] = {}
+    image_relpath_by_block_id: dict[str, str] = {}
+    for image_number, image in enumerate(images, start=1):
+        image_key = format_image_key(package_keys["imagesPrefix"], image_number)
+        image_key_by_block_id[image.block_id] = image_key
+        image_relpath_by_block_id[image.block_id] = f"images/{image_filename(image_number)}"
+        write_object_bytes(
+            client,
+            bucket=text_bucket,
+            key=image_key,
+            body=image.png_bytes,
+            content_type="image/png",
+        )
+
+    write_object_bytes(
+        client,
+        bucket=text_bucket,
+        key=package_keys["previewMarkdownKey"],
+        body=build_preview_markdown(blocks, image_relpath_by_block_id).encode("utf-8"),
+        content_type="text/markdown; charset=utf-8",
+    )
+
     for block_number, block in enumerate(blocks, start=1):
         block_key = format_block_key(package_keys["blocksPrefix"], block_number)
         payload = build_block_payload(
             source_document_id=source_document_id,
             extraction_id=extraction_id,
             block=block,
+            media_key=image_key_by_block_id.get(block.block_id),
         )
         write_object_bytes(
             client,
@@ -237,6 +318,7 @@ def write_text_package(
         page_count=page_count,
         detected_languages=detected_languages,
         warnings=warnings,
+        images=images,
     )
     write_object_bytes(
         client,
@@ -270,7 +352,9 @@ def package_from_pdf_result(result: PdfExtractionResult) -> dict[str, Any]:
         "chunks": result.chunks,
         "page_count": result.page_count,
         "slide_count": None,
-        "table_count": None,
+        "table_count": result.table_count or None,
+        "image_count": result.image_count or None,
+        "images": result.images,
         "detected_languages": result.detected_languages,
         "warnings": result.warnings,
         "extraction_strategy": EXTRACTION_STRATEGY_PDF_TEXT_LAYER,
@@ -339,6 +423,7 @@ def build_extraction_branch_result(
     page_count: int | None,
     slide_count: int | None = None,
     table_count: int | None = None,
+    image_count: int | None = None,
     warnings: list[str],
     error: dict[str, str] | None = None,
 ) -> dict[str, Any]:
@@ -363,6 +448,8 @@ def build_extraction_branch_result(
         result["slideCount"] = slide_count
     if table_count is not None:
         result["tableCount"] = table_count
+    if image_count is not None:
+        result["imageCount"] = image_count
     if warnings:
         result["warnings"] = warnings
     if error:

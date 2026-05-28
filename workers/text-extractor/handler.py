@@ -210,6 +210,7 @@ def process_text_extraction(
         page_count=extracted["page_count"],
         detected_languages=extracted["detected_languages"],
         warnings=extracted["warnings"],
+        images=extracted.get("images"),
     )
 
     return build_extraction_branch_result(
@@ -222,6 +223,7 @@ def process_text_extraction(
         page_count=extracted["page_count"],
         slide_count=extracted.get("slide_count"),
         table_count=extracted.get("table_count"),
+        image_count=extracted.get("image_count"),
         warnings=extracted["warnings"],
     )
 
