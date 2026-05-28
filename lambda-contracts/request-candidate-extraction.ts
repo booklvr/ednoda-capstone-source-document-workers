@@ -1,4 +1,4 @@
-import { sourceDocumentCandidateExtractionInputV1Schema } from '../../src/schemas/source-documents/source-document-candidate-extraction'
+import { sourceDocumentCandidateExtractionInputV1Schema } from '../typescript-schemas/source-documents/source-document-candidate-extraction'
 
 import { buildCandidateExtractionInputV1 } from './shared/build-candidate-extraction-handoff'
 import {

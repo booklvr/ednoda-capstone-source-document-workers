@@ -23,13 +23,13 @@ This document is the **UBC-facing integration contract** for Source Document **n
 
 UBC does **not** own upload, preview, text extraction, or Postgres writes. Ednoda does **not** own UBC's heuristics, models, or internal processing.
 
-**Alpha note:** Ednoda runs deterministic candidate stubs for internal UI/testing. The Python worker stub (`workers/source-documents/candidate-extractor-stub/`) reads `plain.txt` and runs simple heuristics. The currently wired `dev` / `staging` / `demo` Step Functions path uses the TypeScript local stub mirror in `lambda/source-documents/shared/dispatch-dev-candidate-stub.ts`. Neither stub is UBC; both use the same callback schema.
+**Local stub note:** Ednoda runs deterministic candidate stubs for internal UI/testing. The Python worker stub (`workers/source-documents/candidate-extractor-stub/`) reads `plain.txt` and runs simple heuristics. The currently wired `dev` / `staging` / `demo` Step Functions path uses the TypeScript local stub mirror in `lambda/source-documents/shared/dispatch-dev-candidate-stub.ts`. Neither stub is UBC; both use the same callback schema.
 
 ---
 
 ## Prerequisites — when Ednoda invokes UBC
 
-Candidate extraction runs only after text extraction reaches **`ready`** with a complete S3 text package. Ednoda does **not** invoke UBC when text extraction is `failed` or `ocr_required` (no text package exists).
+Candidate extraction runs only after text extraction reaches **`ready`** with a complete S3 text package. Ednoda does **not** invoke UBC when text extraction is `partial`, `failed`, or `ocr_required`.
 
 See [ubc-text-package-handoff-readiness.md](./ubc-text-package-handoff-readiness.md) for Ednoda's verified text package layout.
 
@@ -495,7 +495,7 @@ with urllib.request.urlopen(request, timeout=30) as response:
 | 9.11 text package handoff readiness | Complete | [ubc-text-package-handoff-readiness.md](./ubc-text-package-handoff-readiness.md) |
 | 10.5 handoff payload builder | Complete | `lambda/source-documents/request-candidate-extraction.ts` |
 | **10.6a UBC contract docs (this doc)** | Complete | Documentation only |
-| 10.6b local adapter/stub harness | Complete enough for Alpha | Local TypeScript/Python harnesses exist; not UBC production |
+| 10.6b local adapter/stub harness | Complete for local/dev validation | Local TypeScript/Python harnesses exist; not UBC production |
 | 10.6 UBC dispatch | **Deferred** | Real invocation when UBC is ready |
 
 **Recommended next step for UBC:** Implement extraction against this contract and the text package doc. **Recommended next step for Ednoda:** keep local stubs aligned with this contract, then implement **10.6** when the production invocation mechanism is approved.

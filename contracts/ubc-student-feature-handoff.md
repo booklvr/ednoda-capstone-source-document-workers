@@ -291,7 +291,7 @@ The **contract shape is the right decision** for MVP:
 
 This is a good boundary because every file type becomes one common package. Candidate extraction can then ignore whether the original was PDF, DOCX, PPTX, TXT, or CSV.
 
-The current implementation is **Alpha-ready**, not "all classroom documents are handled well" ready.
+The current implementation is **MVP-transition-ready**, not "all classroom documents are handled well" ready.
 
 It should work as a starting point for:
 

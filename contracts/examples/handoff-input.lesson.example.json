@@ -1,0 +1,39 @@
+{
+  "version": "source-document-candidate-extraction.v1",
+  "environment": "dev",
+  "sourceDocumentId": 42,
+  "extractionId": 7,
+  "target": {
+    "targetType": "lesson",
+    "lessonId": 101,
+    "defaultQuestionListId": 55
+  },
+  "extractedTextPackage": {
+    "manifest": {
+      "bucket": "ednoda-dev-source-document-text",
+      "key": "source-document-text/user/00000000-0000-4000-8000-000000000001/document/42/extraction/7/manifest.json"
+    },
+    "plainText": {
+      "bucket": "ednoda-dev-source-document-text",
+      "key": "source-document-text/user/00000000-0000-4000-8000-000000000001/document/42/extraction/7/plain.txt"
+    },
+    "chunksPrefix": {
+      "bucket": "ednoda-dev-source-document-text",
+      "prefix": "source-document-text/user/00000000-0000-4000-8000-000000000001/document/42/extraction/7/chunks/"
+    },
+    "blocksPrefix": {
+      "bucket": "ednoda-dev-source-document-text",
+      "prefix": "source-document-text/user/00000000-0000-4000-8000-000000000001/document/42/extraction/7/blocks/"
+    }
+  },
+  "original": {
+    "filename": "lesson-vocab.txt",
+    "mimeType": "text/plain",
+    "fileExtension": ".txt"
+  },
+  "callback": {
+    "url": "https://app.example.com/api/source-documents/node-candidates/callback",
+    "signingHeader": "X-Ednoda-Signature",
+    "taskToken": null
+  }
+}

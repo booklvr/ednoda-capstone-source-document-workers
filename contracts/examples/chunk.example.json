@@ -1,0 +1,11 @@
+{
+  "version": "ednoda.extracted-source-document-block.v1",
+  "sourceDocumentId": 42,
+  "extractionId": 7,
+  "chunkId": "chunk-000001",
+  "index": 0,
+  "charStart": 0,
+  "charEnd": 47,
+  "sourceBlockIds": ["block-000001"],
+  "text": "habitat: the natural home of an animal or plant"
+}

@@ -2,6 +2,8 @@
 
 This is a small, scoped copy of the Ednoda source-document worker boundary for UBC student work.
 
+This package is a **snapshot**, not a live mirror of the production Ednoda app repo. Ednoda will refresh it intentionally when the source-document contracts change.
+
 It intentionally contains only the code and contracts needed for:
 
 1. document text extraction
@@ -32,7 +34,7 @@ UBC should not write `EducationNode`, `LessonNode`, `TextbookNode`, or Postgres 
 
 ```plain text
 contracts/
-  UBC-facing and internal data-contract docs.
+  UBC-facing and internal data-contract docs, plus small JSON examples.
 
 workers/text-extractor/
   Python text extraction logic for TXT, PDF, CSV, DOCX, and PPTX.
@@ -109,6 +111,7 @@ The candidate runner uses the current deterministic Python heuristics. The produ
 
 1. Read `contracts/ubc-student-feature-handoff.md`.
 2. Read `contracts/ubc-candidate-extraction-contract.md`.
-3. Run the local text extraction script on all fixture files.
-4. Add or improve tests before changing extraction behavior.
-5. Improve candidate extraction against `manifest.json`, `plain.txt`, blocks, and chunks.
+3. Read `CONTRIBUTING.md`.
+4. Run the local text extraction script on all fixture files.
+5. Add or improve tests before changing extraction behavior.
+6. Improve candidate extraction against `manifest.json`, `plain.txt`, blocks, and chunks.

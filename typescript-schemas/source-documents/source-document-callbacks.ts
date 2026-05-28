@@ -156,10 +156,11 @@ const EXTRACTION_CALLBACK_TERMINAL_STATUSES = [
 ] as const
 
 /**
- * Zod super-refine for Alpha extraction callback shape.
+ * Zod super-refine for extraction callback shape.
  *
- * Enforces pointer rules: required for `ready` only at the app layer (server derives paths);
- * forbidden for `failed` and `ocr_required`; `error` required only for `failed`.
+ * Enforces pointer rules: required for `ready` and `partial` at the app layer
+ * (server derives paths); forbidden for `failed` and `ocr_required`; `error`
+ * required only for `failed`.
  */
 function refineExtractionCallback(
   value: {
@@ -238,7 +239,7 @@ export type SourceDocumentMalwareScanCallback = z.infer<
 export const sourceDocumentPreviewCallbackSchema =
   sourceDocumentCallbackBaseSchema
     .extend({
-      previewId: positiveIntSchema.optional(),
+      previewId: positiveIntSchema,
       status: sourceDocumentPreviewStatusSchema,
       previewStrategy: previewStrategySchema,
       pageCount: nonNegativeIntSchema.optional(),
@@ -259,7 +260,7 @@ export type SourceDocumentPreviewCallback = z.infer<
 /**
  * Text extraction worker callback — metadata and S3 pointers only (task 5.7).
  *
- * Alpha: `ready`, `failed`, or `ocr_required` only. `extractionId` is required.
+ * `ready`, `failed`, `partial`, or `ocr_required` only. `extractionId` is required.
  * Full text, blocks, and chunks stay in S3; never embed them in this payload.
  */
 export const sourceDocumentExtractionCallbackSchema =

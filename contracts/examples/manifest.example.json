@@ -1,0 +1,48 @@
+{
+  "version": "ednoda.extracted-source-document.v1",
+  "document": {
+    "sourceDocumentId": 42,
+    "extractionId": 7,
+    "originalFilename": "lesson-vocab.txt",
+    "originalMimeType": "text/plain",
+    "fileExtension": ".txt",
+    "originalBucket": "ednoda-dev-source-documents",
+    "originalKey": "source-documents/user/00000000-0000-4000-8000-000000000001/document/42/original/lesson-vocab.txt"
+  },
+  "extraction": {
+    "status": "ready",
+    "extractionStrategy": "plain_text",
+    "charCount": 47,
+    "blockCount": 1,
+    "chunkCount": 1,
+    "detectedLanguages": [],
+    "warnings": []
+  },
+  "outputs": {
+    "plainText": {
+      "bucket": "ednoda-dev-source-document-text",
+      "key": "source-document-text/user/00000000-0000-4000-8000-000000000001/document/42/extraction/7/plain.txt"
+    },
+    "blockIndex": [
+      {
+        "blockId": "block-000001",
+        "bucket": "ednoda-dev-source-document-text",
+        "key": "source-document-text/user/00000000-0000-4000-8000-000000000001/document/42/extraction/7/blocks/block-000001.json",
+        "blockType": "paragraph",
+        "charCount": 47,
+        "detectedLanguage": "unknown"
+      }
+    ],
+    "chunks": [
+      {
+        "chunkId": "chunk-000001",
+        "bucket": "ednoda-dev-source-document-text",
+        "key": "source-document-text/user/00000000-0000-4000-8000-000000000001/document/42/extraction/7/chunks/chunk-000001.json",
+        "index": 0,
+        "charStart": 0,
+        "charEnd": 47,
+        "sourceBlockIds": ["block-000001"]
+      }
+    ]
+  }
+}

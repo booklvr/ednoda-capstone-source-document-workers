@@ -1,0 +1,22 @@
+{
+  "version": "source-document-candidate-extraction-result.v1",
+  "sourceDocumentId": 42,
+  "extractionId": 7,
+  "status": "ready",
+  "candidates": [
+    {
+      "candidateType": "vocab",
+      "text": "habitat",
+      "normalizedText": "habitat",
+      "promptText": null,
+      "answerText": "the natural home of an animal or plant",
+      "sourceBlockId": "block-000001",
+      "sourcePageNumber": null,
+      "sourceSlideNumber": null,
+      "confidence": 0.91,
+      "metadata": {
+        "extractor": "ubc-example"
+      }
+    }
+  ]
+}

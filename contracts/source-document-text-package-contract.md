@@ -259,8 +259,8 @@ Requirements:
 
 - UTF-8 plain text concatenation of extracted content for the attempt
 - Referenced by `outputs.plainText` in the manifest
-- Used by Alpha candidate stub heuristics and review UI text preview
-- Required only when manifest `extraction.status` is `ready`; must exist before the callback and `extraction.charCount` should reflect its length
+- Used by candidate extraction logic and review UI text preview
+- Required when manifest `extraction.status` is `ready` or `partial`; must exist before the callback and `extraction.charCount` should reflect its length
 - For `failed` or `ocr_required`, do not write a text package (no `plain.txt`, manifest, blocks, or chunks)
 
 ---
@@ -272,18 +272,18 @@ Requirements:
 
 The extraction worker **must not** send extracted text, block arrays, or chunk bodies in the callback. Ednoda persists **S3 pointers and counts** on `SourceDocumentExtraction` and updates document-level `extractionStatus`. The callback handler does **not** read S3.
 
-### Alpha callback rules
+### Callback rules
 
-| Field | `ready` | `ocr_required` | `failed` |
-| --- | --- | --- | --- |
-| `extractionId` | Required | Required | Required |
-| `textBucket`, `manifestKey`, `plainTextKey` | Optional in JSON; server derives and persists canonical paths. If sent, must match `buildSourceDocumentExtractionTextPackageKeys`. | Must be omitted | Must be omitted |
-| `charCount`, `blockCount`, `chunkCount` | Optional; should match manifest when provided | Omit or zero | Omit |
-| `pageCount`, `slideCount`, `tableCount` | Optional | Optional (`pageCount` when known for PDF) | Omit |
-| `warnings` | Optional | Optional | Omit |
-| `error` | Must be omitted | Must be omitted | Required |
+| Field | `ready` | `partial` | `ocr_required` | `failed` |
+| --- | --- | --- | --- | --- |
+| `extractionId` | Required, real `SourceDocumentExtraction.id` | Required, real `SourceDocumentExtraction.id` | Required, real `SourceDocumentExtraction.id` | Required, real `SourceDocumentExtraction.id` |
+| `textBucket`, `manifestKey`, `plainTextKey` | Optional in JSON; server derives and persists canonical paths. If sent, must match `buildSourceDocumentExtractionTextPackageKeys`. | Same as `ready` | Must be omitted | Must be omitted |
+| `charCount`, `blockCount`, `chunkCount` | Optional; should match manifest when provided | Optional; should match manifest when provided | Omit or zero | Omit |
+| `pageCount`, `slideCount`, `tableCount` | Optional | Optional | Optional (`pageCount` when known for PDF) | Omit |
+| `warnings` | Optional | Optional | Optional | Omit |
+| `error` | Must be omitted | Must be omitted | Must be omitted | Required |
 
-**Validation (app):** `completeSourceDocumentExtractionCallbackUtil` checks that `sourceDocumentId` exists, `extractionId` exists, the extraction row belongs to the document, terminal status transition is valid (idempotent replay of the same terminal status → stale), and pointers match the environment text bucket and key prefix for `ready`.
+**Validation (app):** `completeSourceDocumentExtractionCallbackUtil` checks that `sourceDocumentId` exists, `extractionId` exists as a real prepared extraction-attempt row, the extraction row belongs to the document, terminal status transition is valid (idempotent replay of the same terminal status -> stale), and pointers match the environment text bucket and key prefix for `ready` / `partial`.
 
 Example callback body (`ready` — pointers optional; counts only):
 
@@ -312,13 +312,13 @@ Example callback body (`ocr_required` — no package):
 }
 ```
 
-**Not allowed in callback:** `plainText` body, `blockIndex`, `chunks`, individual block `text`, manifest JSON blob, original file bytes, or `partial` status (Alpha).
+**Not allowed in callback:** `plainText` body, `blockIndex`, `chunks`, individual block `text`, manifest JSON blob, original file bytes, or attempt numbers masquerading as `extractionId`.
 
 ---
 
 ## Downstream candidate extraction boundary
 
-After text extraction reaches `ready`, **candidate extraction** (Alpha stub or Full UBC) receives **S3 pointers**, not inline text packages. This is the **first pipeline step that assigns `candidateType`** — text extraction output remains candidate-type-free. Alpha does not hand off on `ocr_required` or `failed`.
+After text extraction reaches `ready`, **candidate extraction** (local stub or UBC) receives **S3 pointers**, not inline text packages. This is the **first pipeline step that assigns `candidateType`** — text extraction output remains candidate-type-free. Ednoda does not hand off on `partial`, `ocr_required`, or `failed`.
 
 **Handoff schema:** `SourceDocumentCandidateExtractionInputV1`
 

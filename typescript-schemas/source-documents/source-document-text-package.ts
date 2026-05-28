@@ -189,6 +189,8 @@ export const sourceDocumentWorkflowInputV1Schema = z
     original: sourceDocumentWorkflowOriginalSchema,
     requestedAtIso: isoDateTimeSchema,
     attemptNumber: positiveIntSchema,
+    previewId: positiveIntSchema.optional(),
+    extractionId: positiveIntSchema.optional(),
     workflowMode: z.enum([
       SourceDocumentWorkflowMode.full,
       SourceDocumentWorkflowMode.previewOnly,
