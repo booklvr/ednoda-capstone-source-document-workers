@@ -27,9 +27,21 @@ def build_extraction_text_package_keys(
         "textBucket": text_bucket,
         "manifestKey": f"{prefix}/manifest.json",
         "plainTextKey": f"{prefix}/plain.txt",
+        # preview.md is an additive, human-readable rendering (markdown tables +
+        # image references). plain.txt remains the contract-canonical text body.
+        "previewMarkdownKey": f"{prefix}/preview.md",
         "blocksPrefix": f"{prefix}/blocks/",
         "chunksPrefix": f"{prefix}/chunks/",
+        "imagesPrefix": f"{prefix}/images/",
     }
+
+
+def format_image_key(images_prefix: str, image_number: int) -> str:
+    return f"{images_prefix}image-{image_number:06d}.png"
+
+
+def image_filename(image_number: int) -> str:
+    return f"image-{image_number:06d}.png"
 
 
 def build_preview_prefix(

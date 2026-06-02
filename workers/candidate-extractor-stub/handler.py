@@ -1,7 +1,8 @@
-"""Alpha Source Document deterministic candidate extraction stub."""
+"""Alpha Source Document NLU candidate extraction handler."""
 
 from __future__ import annotations
 
+import logging
 import sys
 from pathlib import Path
 from typing import Any
@@ -12,7 +13,8 @@ for path in (WORKER_ROOT, STUB_DIR):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from heuristics import extract_candidates_from_plain_text  # noqa: E402
+from chunker import SlidingWindowChunker  # noqa: E402
+from labeller import NLULabeller  # noqa: E402
 from shared.callback_post import (  # noqa: E402
     build_node_candidates_callback_body,
     try_post_node_candidates_callback,
@@ -20,7 +22,6 @@ from shared.callback_post import (  # noqa: E402
 from shared.contracts import (  # noqa: E402
     CANDIDATE_STATUS_FAILED,
     CANDIDATE_STATUS_READY,
-    WARNING_NO_CANDIDATES_FOUND,
 )
 from shared.event import (  # noqa: E402
     CandidateExtractorEvent,
@@ -29,6 +30,12 @@ from shared.event import (  # noqa: E402
 )
 from shared.s3_client import create_boto3_s3_client, read_object_bytes  # noqa: E402
 from shared.worker_errors import is_transient_infrastructure_error  # noqa: E402
+
+# "partial" is not yet in shared/contracts.py as a candidate status literal
+_CANDIDATE_STATUS_PARTIAL = "partial"
+_WARNING_NLU_NO_CANDIDATES = "NLU labeller returned no candidates"
+
+logger = logging.getLogger(__name__)
 
 
 def build_candidate_branch_result(
@@ -71,19 +78,37 @@ def process_candidate_extraction(
             },
         )
 
-    candidates = extract_candidates_from_plain_text(plain_text)
+    # Blocks are not carried in CandidateExtractorEvent; pass [] so chunker
+    # and labeller operate gracefully without source-block attribution.
+    chunker = SlidingWindowChunker()
+    chunks = chunker.chunk(plain_text, [])
+
+    labeller = NLULabeller()
+    candidates = labeller.label(chunks, [])
+
     warnings: list[str] = []
     if not candidates:
-        warnings.append(WARNING_NO_CANDIDATES_FOUND)
+        warnings.append(_WARNING_NLU_NO_CANDIDATES)
+        status = _CANDIDATE_STATUS_PARTIAL
+    else:
+        status = CANDIDATE_STATUS_READY
 
     return build_candidate_branch_result(
-        status=CANDIDATE_STATUS_READY,
+        status=status,
         candidates=candidates,
         warnings=warnings or None,
     )
 
 
 def handler(event: dict[str, Any], _context: Any | None = None) -> dict[str, Any]:
+    document_id = event.get("sourceDocumentId", "unknown")
+    extraction_id = event.get("extractionId", "unknown")
+    logger.info(
+        "candidate-extractor start documentId=%s extractionId=%s",
+        document_id,
+        extraction_id,
+    )
+
     try:
         parsed = parse_candidate_extractor_event(event)
     except WorkerEventError as error:
@@ -91,6 +116,12 @@ def handler(event: dict[str, Any], _context: Any | None = None) -> dict[str, Any
             status=CANDIDATE_STATUS_FAILED,
             candidates=[],
             error={"code": "invalid_event", "message": str(error)},
+        )
+        logger.info(
+            "candidate-extractor end documentId=%s extractionId=%s status=%s",
+            document_id,
+            extraction_id,
+            result["status"],
         )
         return result
 
@@ -107,7 +138,24 @@ def handler(event: dict[str, Any], _context: Any | None = None) -> dict[str, Any
                 "message": str(error),
             },
         )
+        try:
+            callback_body = build_node_candidates_callback_body(parsed, result)
+            try_post_node_candidates_callback(callback_body)
+        except Exception:
+            pass
+        logger.info(
+            "candidate-extractor end documentId=%s extractionId=%s status=failed",
+            document_id,
+            extraction_id,
+        )
+        return {"statusCode": 500}
 
     callback_body = build_node_candidates_callback_body(parsed, result)
     try_post_node_candidates_callback(callback_body)
-    return result
+    logger.info(
+        "candidate-extractor end documentId=%s extractionId=%s status=%s",
+        document_id,
+        extraction_id,
+        result["status"],
+    )
+    return {"statusCode": 200}

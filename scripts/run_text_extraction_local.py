@@ -283,6 +283,7 @@ def main() -> int:
                 page_count=extracted["page_count"],
                 detected_languages=extracted["detected_languages"],
                 warnings=warnings,
+                images=extracted.get("images"),
             )
             result = build_extraction_branch_result(
                 status=status,
@@ -294,6 +295,7 @@ def main() -> int:
                 page_count=extracted["page_count"],
                 slide_count=extracted.get("slide_count"),
                 table_count=extracted.get("table_count"),
+                image_count=extracted.get("image_count"),
                 warnings=warnings,
             )
 

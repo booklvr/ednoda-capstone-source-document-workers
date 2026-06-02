@@ -2,3 +2,11 @@ boto3>=1.34.0,<2.0.0
 httpx>=0.27.0,<1.0.0
 PyMuPDF>=1.24.0,<2.0.0
 python-pptx>=1.0.2,<2.0.0
+# NLU pipeline — added 2026-05-30
+spacy>=3.0
+keybert
+bm25s
+sentence-transformers
+pydantic>=2.0
+requests
+numpy
