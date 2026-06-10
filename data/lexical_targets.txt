@@ -1,0 +1,15 @@
+# Lexical Anchor — ESL target headwords
+# One word per line. Lines starting with # are ignored.
+# Words are matched case-insensitively after lowercasing.
+# Replace with a full CEFR-J wordlist for production.
+
+robot
+space
+treasure
+pirate
+adjective
+planet
+explore
+noun
+verb
+dragon
