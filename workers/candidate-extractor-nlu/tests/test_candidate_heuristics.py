@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 WORKER_ROOT = Path(__file__).resolve().parents[2]
-STUB_DIR = WORKER_ROOT / "candidate-extractor-stub"
+STUB_DIR = WORKER_ROOT / "candidate-extractor-nlu"
 for path in (WORKER_ROOT, STUB_DIR):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))

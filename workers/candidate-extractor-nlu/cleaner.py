@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections import Counter
 
 # Lines whose first meaningful word(s) are administrative keywords carry no
 # educational signal. We also strip lines consisting only of digits/punctuation
@@ -26,6 +27,22 @@ _BOILERPLATE_PATTERN = re.compile(
 
 _NUMBERS_AND_PUNCT_ONLY = re.compile(r"^[\d\s\W]+$")
 
+# Page furniture: "Page 12", "p. 7", "pp. 12-13". These are navigation labels,
+# not lesson content. Bare numbers ("12") are already handled by the
+# numbers-and-punct-only rule above.
+_PAGE_FURNITURE_RE = re.compile(
+    r"^\s*(?:page|pp?\.)\s*\d+(?:\s*[-–—]\s*\d+)?\s*$",
+    re.IGNORECASE,
+)
+
+# Running headers/footers: the same short line repeated on many pages (book
+# title, chapter banner) carries no educational signal and inflates candidate
+# counts. Thresholds are deliberately conservative so we do not drop legitimate
+# repeated lesson content — a real content line rarely repeats verbatim this
+# many times.
+_MIN_REPEAT_TO_DROP = 4   # must appear at least this many times to be a header
+_MAX_HEADER_WORDS = 10    # headers/footers are short; longer repeats are content
+
 # Korean lesson-script speaker tags at the start of a line: "T\t", "S\t", "T ", "S  ".
 # A single T or S followed by whitespace is never a real English word start.
 _DIALOGUE_MARKER_RE = re.compile(r"^[TS]\s+", re.MULTILINE)
@@ -43,14 +60,22 @@ class TextCleaner:
         # 1. Remove Korean lesson-script speaker tags (T\t, S\t, T , S )
         text = _DIALOGUE_MARKER_RE.sub("", text)
 
-        # 2. Line-by-line boilerplate and standalone-number removal
+        # 2. Identify running headers/footers (document-wide frequency pass).
+        running_headers = self._running_header_lines(text)
+
+        # 3. Line-by-line removal of headers, page furniture, standalone
+        #    numbers, and boilerplate.
         cleaned: list[str] = []
         for line in text.splitlines():
             stripped = line.strip()
             if not stripped:
                 cleaned.append("")
                 continue
+            if stripped in running_headers:
+                continue
             if self._is_numbers_and_punct_only(stripped):
+                continue
+            if self._is_page_furniture(stripped):
                 continue
             if self._is_boilerplate(stripped):
                 continue
@@ -65,6 +90,28 @@ class TextCleaner:
 
         # 4. Collapse runs of 3+ blank lines to 2 so paragraph structure is preserved
         return re.sub(r"\n{3,}", "\n\n", result)
+
+    @staticmethod
+    def _running_header_lines(text: str) -> set[str]:
+        """Return the set of stripped lines that look like running headers/footers.
+
+        A line qualifies when it is short (header-like) and repeats verbatim at
+        least ``_MIN_REPEAT_TO_DROP`` times across the document.
+        """
+        counts: Counter[str] = Counter()
+        for line in text.splitlines():
+            stripped = line.strip()
+            if stripped:
+                counts[stripped] += 1
+        return {
+            stripped
+            for stripped, count in counts.items()
+            if count >= _MIN_REPEAT_TO_DROP and len(stripped.split()) <= _MAX_HEADER_WORDS
+        }
+
+    @staticmethod
+    def _is_page_furniture(line: str) -> bool:
+        return bool(_PAGE_FURNITURE_RE.match(line))
 
     @staticmethod
     def _is_numbers_and_punct_only(line: str) -> bool:
