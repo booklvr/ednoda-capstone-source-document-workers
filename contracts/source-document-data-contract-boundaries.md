@@ -130,7 +130,7 @@ Candidate extraction POSTs `sourceDocumentNodeCandidatesCallbackSchema` to `/api
 | All worker callbacks | `src/schemas/source-documents/source-document-callbacks.ts` |
 | Handoff payload builder (Lambda) | `lambda/source-documents/shared/build-candidate-extraction-handoff.ts` |
 | Text package writer (Python) | `workers/source-documents/text-extractor/package_writer.py` |
-| Candidate stub (Python) | `workers/source-documents/candidate-extractor-stub/heuristics.py` |
+| Candidate stub (Python) | `workers/source-documents/candidate-extractor-nlu/heuristics.py` |
 
 ---
 

@@ -119,7 +119,7 @@ Align with [ubc-candidate-extraction-contract.md](./ubc-candidate-extraction-con
 
 - Remove "legacy labels accepted on callbacks" language from UBC and external extraction docs.
 - Callback Zod ingress should **reject** unknown `candidateType` strings (strict enum), not normalize them.
-- Local stub (`workers/source-documents/candidate-extractor-stub/`) emits only `vocab`, `question`, `expression` — no change required except docs/tests.
+- Local stub (`workers/source-documents/candidate-extractor-nlu/`) emits only `vocab`, `question`, `expression` — no change required except docs/tests.
 - UBC local adapter (`ubc_local_adapter.py`) already uses the three productive types in dummy output — add `unknown` only in tests if needed.
 
 **Classification rule of thumb for UBC:**
@@ -165,8 +165,8 @@ Align with [ubc-candidate-extraction-contract.md](./ubc-candidate-extraction-con
 | File | Current state | Action |
 | --- | --- | --- |
 | `workers/source-documents/shared/contracts.py` | 3 constants only — **correct** | No change |
-| `workers/source-documents/candidate-extractor-stub/heuristics.py` | Emits vocab/question/expression — **correct** | No change |
-| `workers/source-documents/candidate-extractor-stub/ubc_local_adapter.py` | Emits vocab/question — **correct** | Optional: document that `answerText` on question stub is a hint only |
+| `workers/source-documents/candidate-extractor-nlu/heuristics.py` | Emits vocab/question/expression — **correct** | No change |
+| `workers/source-documents/candidate-extractor-nlu/ubc_local_adapter.py` | Emits vocab/question — **correct** | Optional: document that `answerText` on question stub is a hint only |
 
 ### Docs / prompts
 
@@ -188,7 +188,7 @@ Align with [ubc-candidate-extraction-contract.md](./ubc-candidate-extraction-con
 | `tests/unit/utils/server/source-document/mapCandidateToEducationNodeInputUtil.test.ts` | Keep — already 4-type |
 | `tests/factories/source-document-node-candidate.factory.ts` | Already uses `NodeCandidateType` — keep |
 | `tests/integration/actions/source-document/serverFetchSourceDocumentCandidates.test.ts` | Already uses 4 types — keep |
-| Worker tests under `workers/source-documents/candidate-extractor-stub/tests/` | Already 3 productive types — keep |
+| Worker tests under `workers/source-documents/candidate-extractor-nlu/tests/` | Already 3 productive types — keep |
 
 ---
 
@@ -277,6 +277,6 @@ If legacy rows exist in dev, either:
 ### Already aligned (no legacy emission)
 
 - `workers/source-documents/shared/contracts.py`
-- `workers/source-documents/candidate-extractor-stub/heuristics.py`
+- `workers/source-documents/candidate-extractor-nlu/heuristics.py`
 - `src/components/source-documents/SourceDocumentCandidateList.tsx`
 - `src/utils/server/source-document/mapCandidateToEducationNodeInputUtil.ts`

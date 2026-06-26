@@ -23,7 +23,7 @@ This document is the **UBC-facing integration contract** for Source Document **n
 
 UBC does **not** own upload, preview, text extraction, or Postgres writes. Ednoda does **not** own UBC's heuristics, models, or internal processing.
 
-**Local stub note:** Ednoda runs deterministic candidate stubs for internal UI/testing. The Python worker stub (`workers/source-documents/candidate-extractor-stub/`) reads `plain.txt` and runs simple heuristics. The currently wired `dev` / `staging` / `demo` Step Functions path uses the TypeScript local stub mirror in `lambda/source-documents/shared/dispatch-dev-candidate-stub.ts`. Neither stub is UBC; both use the same callback schema.
+**Local stub note:** Ednoda runs deterministic candidate stubs for internal UI/testing. The Python worker stub (`workers/source-documents/candidate-extractor-nlu/`) reads `plain.txt` and runs simple heuristics. The currently wired `dev` / `staging` / `demo` Step Functions path uses the TypeScript local stub mirror in `lambda/source-documents/shared/dispatch-dev-candidate-stub.ts`. Neither stub is UBC; both use the same callback schema.
 
 ---
 
