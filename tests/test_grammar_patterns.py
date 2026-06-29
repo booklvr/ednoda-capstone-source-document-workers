@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-for _p in (ROOT / "workers", ROOT / "workers" / "candidate-extractor-stub"):
+for _p in (ROOT / "workers", ROOT / "workers" / "candidate-extractor-nlu"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 

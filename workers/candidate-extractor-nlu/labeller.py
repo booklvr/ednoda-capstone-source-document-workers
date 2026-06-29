@@ -8,23 +8,60 @@ import sys
 from pathlib import Path
 from typing import Any
 
-try:
-    import bm25s as _bm25s_lib
-except ImportError:
-    _bm25s_lib = None
-    print("WARNING: bm25s not available; NLULabeller will use KeyBERT only")
+# Heavy NLU libraries are imported lazily (Nick's integrated pattern) so they do
+# not run during Lambda cold-start init — they load on first use instead, which
+# meaningfully reduces cold-start latency for the candidate-extractor function.
+_bm25s_lib: Any | None = None
+_bm25s_import_attempted = False
+_KeyBERT: Any | None = None
+_keybert_import_attempted = False
+_spacy_lib: Any | None = None
+_spacy_import_attempted = False
 
-try:
-    from keybert import KeyBERT as _KeyBERT
-except ImportError:
-    _KeyBERT = None
-    print("WARNING: keybert not available; NLULabeller will return question candidates only")
 
-try:
-    import spacy as _spacy_lib
-except ImportError:
-    _spacy_lib = None
-    print("WARNING: spacy not available; NLULabeller question detection and sentence splitting disabled")
+def _load_bm25s_lib() -> Any:
+    global _bm25s_import_attempted, _bm25s_lib
+    if _bm25s_import_attempted:
+        return _bm25s_lib
+    _bm25s_import_attempted = True
+    try:
+        import bm25s
+
+        _bm25s_lib = bm25s
+    except ImportError:
+        _bm25s_lib = None
+        print("WARNING: bm25s not available; NLULabeller will use KeyBERT only")
+    return _bm25s_lib
+
+
+def _load_keybert_class() -> Any:
+    global _keybert_import_attempted, _KeyBERT
+    if _keybert_import_attempted:
+        return _KeyBERT
+    _keybert_import_attempted = True
+    try:
+        from keybert import KeyBERT
+
+        _KeyBERT = KeyBERT
+    except ImportError:
+        _KeyBERT = None
+        print("WARNING: keybert not available; NLULabeller will return question candidates only")
+    return _KeyBERT
+
+
+def _load_spacy_lib() -> Any:
+    global _spacy_import_attempted, _spacy_lib
+    if _spacy_import_attempted:
+        return _spacy_lib
+    _spacy_import_attempted = True
+    try:
+        import spacy
+
+        _spacy_lib = spacy
+    except ImportError:
+        _spacy_lib = None
+        print("WARNING: spacy not available; NLULabeller question detection and sentence splitting disabled")
+    return _spacy_lib
 
 _WORKER_ROOT = Path(__file__).resolve().parents[1]
 _STUB_DIR = Path(__file__).resolve().parent
@@ -94,6 +131,63 @@ def _strip_punct(word: str) -> str:
     return word.strip(".,;:!?\"'()-–—")
 
 
+# --- Stage C: scoring-hardening helpers (062526-...md) ---------------------
+
+# ENGLISH-DEFAULT: a tiny stopword set used ONLY to decide whether a BM25 query
+# would tokenize to nothing (which produces "the query is empty" log spam and a
+# wasted retrieve pass). It does NOT affect scoring of real content. For
+# non-English targets this simply skips fewer queries (degrades gracefully).
+_BM25_QUERY_SKIP_STOPWORDS = frozenset({
+    "the", "a", "an", "and", "or", "but", "of", "to", "in", "on", "at", "for",
+    "is", "are", "was", "were", "be", "this", "that", "it", "as", "with", "by",
+    "from",
+})
+
+
+def _has_scorable_tokens(text: str) -> bool:
+    """True if ``text`` has at least one real (non-stopword) word worth scoring.
+
+    Filters out chunks that are empty, numeric/punctuation-only, or entirely
+    stopwords — the chunks that otherwise generate empty BM25 queries.
+    """
+    for raw in text.split():
+        word = _strip_punct(raw.lower())
+        if len(word) >= 2 and word.isalpha() and word not in _BM25_QUERY_SKIP_STOPWORDS:
+            return True
+    return False
+
+
+def _merge_keyphrase_scores(
+    keyword_lists: list[list[tuple[str, float]]],
+) -> dict[str, float]:
+    """Merge per-document KeyBERT ``(phrase, score)`` lists into phrase -> max score.
+
+    Shared by the batched and per-chunk KeyBERT paths so both produce identical
+    results.
+    """
+    phrase_scores: dict[str, float] = {}
+    for keywords in keyword_lists:
+        for phrase, score in keywords:
+            key = phrase.lower().strip()
+            if not key:
+                continue
+            value = float(score)
+            if key not in phrase_scores or value > phrase_scores[key]:
+                phrase_scores[key] = value
+    return phrase_scores
+
+
+# Belt-and-suspenders language check (Stage A already gates text upstream; this
+# guards against a stray non-target token surviving into a keyphrase).
+from language_filter import DEFAULT_TARGET_LANGUAGE, is_target_phrase  # noqa: E402
+
+
+def _is_target_language_phrase(phrase: str, target_language: str) -> bool:
+    # Strict: reject a keyphrase if ANY token is foreign-script (real bilingual
+    # pages leak mixed phrases past a dominant-script check).
+    return is_target_phrase(phrase, target_language)
+
+
 class NLULabeller:
     """Ensemble labeller: BM25S + KeyBERT scoring with spaCy question detection."""
 
@@ -107,6 +201,7 @@ class NLULabeller:
         fallback_confidence: float = 0.72,
         question_confidence: float = 0.60,
         anchor_words: frozenset[str] | None = None,
+        target_language: str = DEFAULT_TARGET_LANGUAGE,
     ) -> None:
         self.keybert_model = _env_str("KEYBERT_MODEL", keybert_model)
         self.bm25s_top_n = _env_int("BM25S_TOP_N", bm25s_top_n)
@@ -116,6 +211,8 @@ class NLULabeller:
         self.fallback_confidence = _env_float("FALLBACK_CONFIDENCE", fallback_confidence)
         self.question_confidence = _env_float("QUESTION_CONFIDENCE", question_confidence)
         self._anchor_words: frozenset[str] = anchor_words if anchor_words is not None else frozenset()
+        # ENGLISH-DEFAULT: target language is config (default en); see language_filter.py.
+        self.target_language = target_language
 
         self._kw_model: Any = None
         self._kw_loaded = False
@@ -132,10 +229,11 @@ class NLULabeller:
         if self._kw_loaded:
             return self._kw_model
         self._kw_loaded = True
-        if _KeyBERT is None:
+        keybert_class = _load_keybert_class()
+        if keybert_class is None:
             return None
         try:
-            self._kw_model = _KeyBERT(self.keybert_model)
+            self._kw_model = keybert_class(self.keybert_model)
         except Exception as exc:
             logger.warning("KeyBERT model failed to load (%s): %s", self.keybert_model, exc)
         return self._kw_model
@@ -144,14 +242,15 @@ class NLULabeller:
         if self._nlp_loaded:
             return self._nlp
         self._nlp_loaded = True
-        if _spacy_lib is None:
+        spacy_lib = _load_spacy_lib()
+        if spacy_lib is None:
             return None
         try:
             # Try a full model first for POS tagging; fall back to blank + sentencizer
             try:
-                self._nlp = _spacy_lib.load("en_core_web_sm")
+                self._nlp = spacy_lib.load("en_core_web_sm")
             except OSError:
-                nlp = _spacy_lib.blank("en")
+                nlp = spacy_lib.blank("en")
                 nlp.add_pipe("sentencizer")
                 self._nlp = nlp
         except Exception as exc:
@@ -164,7 +263,8 @@ class NLULabeller:
 
     def _score_bm25s(self, chunks: list[dict]) -> dict[str, float]:
         """Build a BM25S index, query each chunk against the corpus, return word -> score (0-1)."""
-        if _bm25s_lib is None:
+        bm25s_lib = _load_bm25s_lib()
+        if bm25s_lib is None:
             return {}
         if len(chunks) < 2:
             logger.warning(
@@ -173,20 +273,25 @@ class NLULabeller:
             return {}
         try:
             texts = [chunk.get("text", "") for chunk in chunks]
-            corpus_tokens = _bm25s_lib.tokenize(texts, stopwords="en")
-            retriever = _bm25s_lib.BM25()
+            corpus_tokens = bm25s_lib.tokenize(texts, stopwords="en")
+            retriever = bm25s_lib.BM25()
             retriever.index(corpus_tokens)
 
             n_docs = len(texts)
             k = min(n_docs, self.bm25s_top_n)
             term_scores: dict[str, float] = {}
 
+            skipped_empty_queries = 0
             for chunk in chunks:
                 text = chunk.get("text", "")
-                if not text.strip():
+                # Stage C: skip queries that would tokenize to nothing (empty,
+                # numeric/punct-only, or all-stopword) instead of issuing an
+                # empty BM25 retrieve that logs "the query is empty" per chunk.
+                if not _has_scorable_tokens(text):
+                    skipped_empty_queries += 1
                     continue
                 try:
-                    q_tokens = _bm25s_lib.tokenize([text], stopwords="en")
+                    q_tokens = bm25s_lib.tokenize([text], stopwords="en")
                     results, scores = retriever.retrieve(q_tokens, k=k)
                     for i in range(len(results[0])):
                         doc_idx = int(results[0][i])
@@ -202,6 +307,13 @@ class NLULabeller:
                 except Exception as exc:
                     logger.warning("BM25S chunk query failed: %s", exc)
                     continue
+
+            if skipped_empty_queries:
+                logger.info(
+                    "BM25S skipped %d empty/non-scorable chunk quer%s",
+                    skipped_empty_queries,
+                    "y" if skipped_empty_queries == 1 else "ies",
+                )
 
             if not term_scores:
                 return {}
@@ -224,36 +336,55 @@ class NLULabeller:
     # ------------------------------------------------------------------
 
     def _score_keybert(self, chunks: list[dict]) -> dict[str, float]:
-        """Run KeyBERT on each chunk; return keyphrase -> max score across all chunks."""
+        """Run KeyBERT over the chunks; return keyphrase -> max score across all chunks.
+
+        Stage C: only scorable chunks are sent (skips empty/numeric/all-stopword
+        text), and they are scored in a single batched call when supported, with
+        a per-chunk fallback so a batching incompatibility never loses scores.
+        """
         kw_model = self._load_keybert()
         if kw_model is None:
             return {}
+
+        texts = [
+            (chunk.get("text", "") or "")
+            for chunk in chunks
+            if _has_scorable_tokens(chunk.get("text", "") or "")
+        ]
+        if not texts:
+            return {}
+
         try:
-            phrase_scores: dict[str, float] = {}
-            for chunk in chunks:
-                text = chunk.get("text", "") or ""
-                if not text.strip():
-                    continue
-                try:
-                    keywords = kw_model.extract_keywords(
+            # Batched: KeyBERT accepts a list of docs and returns one keyword
+            # list per doc. Far fewer model invocations than one call per chunk.
+            batched = kw_model.extract_keywords(
+                texts,
+                keyphrase_ngram_range=(1, 3),
+                top_n=self.keybert_top_n,
+                stop_words="english",
+            )
+            # Multiple docs -> list-of-lists; a single doc may return a flat list
+            # of (phrase, score) tuples. Normalise both to list-of-lists.
+            keyword_lists = batched if (batched and isinstance(batched[0], list)) else [batched]
+            return _merge_keyphrase_scores(keyword_lists)
+        except Exception as exc:
+            logger.warning("KeyBERT batched extraction failed; falling back per-chunk: %s", exc)
+
+        keyword_lists: list[list[tuple[str, float]]] = []
+        for text in texts:
+            try:
+                keyword_lists.append(
+                    kw_model.extract_keywords(
                         text,
                         keyphrase_ngram_range=(1, 3),
                         top_n=self.keybert_top_n,
                         stop_words="english",
                     )
-                    for phrase, score in keywords:
-                        key = phrase.lower().strip()
-                        if not key:
-                            continue
-                        if key not in phrase_scores or float(score) > phrase_scores[key]:
-                            phrase_scores[key] = float(score)
-                except Exception as exc:
-                    logger.warning("KeyBERT extraction failed on chunk: %s", exc)
-                    continue
-            return phrase_scores
-        except Exception as exc:
-            logger.warning("KeyBERT scoring failed: %s", exc)
-            return {}
+                )
+            except Exception as exc:
+                logger.warning("KeyBERT extraction failed on chunk: %s", exc)
+                continue
+        return _merge_keyphrase_scores(keyword_lists)
 
     # ------------------------------------------------------------------
     # Internal: imperative detection (teacher-instruction filter)
@@ -819,7 +950,7 @@ class NLULabeller:
         keybert_failed = False
         try:
             keybert_scores = self._score_keybert(chunks)
-            if not keybert_scores and _KeyBERT is not None:
+            if not keybert_scores and _load_keybert_class() is not None:
                 keybert_failed = True
         except Exception as exc:
             logger.warning("KeyBERT scoring failed: %s", exc)
@@ -832,6 +963,12 @@ class NLULabeller:
         # 3. Ensemble: vocab / expression candidates from KeyBERT
         if not keybert_failed:
             for keyphrase, kb_score in keybert_scores.items():
+                # Stage C belt-and-suspenders: drop any keyphrase that is not in
+                # the target language (Stage A already gates upstream text, but a
+                # stray cross-script token can still surface here).
+                if not _is_target_language_phrase(keyphrase, self.target_language):
+                    continue
+
                 token_count = len(keyphrase.split())
 
                 if token_count == 1:

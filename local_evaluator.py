@@ -21,7 +21,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent
 WORKERS_DIR = ROOT / "workers"
-CANDIDATE_DIR = WORKERS_DIR / "candidate-extractor-stub"
+CANDIDATE_DIR = WORKERS_DIR / "candidate-extractor-nlu"
 
 for _path in (WORKERS_DIR, CANDIDATE_DIR):
     if str(_path) not in sys.path:

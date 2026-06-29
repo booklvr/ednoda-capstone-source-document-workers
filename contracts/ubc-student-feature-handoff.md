@@ -86,9 +86,9 @@ Important rule: candidate extraction is the first place that assigns `candidateT
 
 | File | What it controls |
 | --- | --- |
-| `workers/source-documents/candidate-extractor-stub/handler.py` | Current deterministic candidate extractor entrypoint |
-| `workers/source-documents/candidate-extractor-stub/heuristics.py` | Simple rules that find vocab/questions/expressions from plain text |
-| `workers/source-documents/candidate-extractor-stub/ubc_local_adapter.py` | Local harness for the future UBC boundary |
+| `workers/source-documents/candidate-extractor-nlu/handler.py` | Current deterministic candidate extractor entrypoint |
+| `workers/source-documents/candidate-extractor-nlu/heuristics.py` | Simple rules that find vocab/questions/expressions from plain text |
+| `workers/source-documents/candidate-extractor-nlu/ubc_local_adapter.py` | Local harness for the future UBC boundary |
 | `lambda/source-documents/shared/dispatch-dev-candidate-stub.ts` | TypeScript mirror used by dev/staging/demo Step Functions |
 
 ### Ednoda callback and persistence
@@ -187,7 +187,7 @@ The manifest should not contain the whole text body. Large text stays in separat
 
 There are two current paths to understand:
 
-1. `workers/source-documents/candidate-extractor-stub/handler.py`
+1. `workers/source-documents/candidate-extractor-nlu/handler.py`
    - Reads `plain.txt` from S3.
    - Runs deterministic Python heuristics.
    - Posts a signed node-candidates callback.

@@ -1,0 +1,11 @@
+# Lexical anchor headwords (one per line, lowercase). Lines starting with "#"
+# and blank lines are ignored by handler.load_anchor_words().
+#
+# INTENTIONALLY EMPTY. Do NOT hardcode document-specific words here (e.g.
+# "robot", "dragon") — that tunes the worker to particular test files. Capture
+# is language-based: a candidate is kept ONLY if it is in the target language
+# (see language_filter.py); the anchor tier is just an optional confidence boost.
+#
+# Populate this ONLY with a general, curriculum-level target wordlist (e.g.
+# CEFR-J) agreed for production. Until then the anchor tier stays inactive and
+# the pipeline degrades gracefully.
